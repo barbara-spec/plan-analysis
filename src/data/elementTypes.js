@@ -1,5 +1,6 @@
 export const METRIC_LABELS = [
   { id: 'count',     label: 'Count' },
+  { id: 'label',     label: 'Label' },
   { id: 'surface',   label: 'Surface' },
   { id: 'maxWidth',  label: 'Max Width' },
   { id: 'minWidth',  label: 'Min Width' },
