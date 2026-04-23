@@ -1,0 +1,26 @@
+export const DOC_TYPES = ['Plan Niveaux', 'Plan Élévation', 'Plan Façade', 'Plan Masse', 'CCTP', 'Notice'];
+
+export const documents = [
+  { id: 'd01', type: 'Plan Niveaux',   name: '10.1-EPA-M1-DCE-PLAN RDC GENERAL' },
+  { id: 'd02', type: 'Plan Niveaux',   name: '10.2-EPA-M1-DCE-PLAN R+1 GENERAL' },
+  { id: 'd03', type: 'Plan Niveaux',   name: '10.3-EPA-M1-DCE-PLAN R+2 GENERAL' },
+  { id: 'd04', type: 'Plan Niveaux',   name: '10.A-EPA-M1-DCE-PLAN RDC ILOT A' },
+  { id: 'd05', type: 'Plan Niveaux',   name: '10.B-EPA-M1-DCE-PLAN RDC ILOT B' },
+  { id: 'd06', type: 'Plan Élévation', name: '50.1-EPA-M1-DCE-ELEVATIONS GENERALES SUR RUES-C' },
+  { id: 'd07', type: 'Plan Élévation', name: '50.2-EPA-M1-DCE-ELEVATIONS GENERALES COEUR D\'ILOT-C' },
+  { id: 'd08', type: 'Plan Élévation', name: '50.A.00-EPA-M1-DCE-ELEVATIONS SUR RUES M1A-C' },
+  { id: 'd09', type: 'Plan Élévation', name: '50.A.01-EPA-M1-DCE-ELEVATIONS COEUR D\'ILOT M1A-C' },
+  { id: 'd10', type: 'Plan Élévation', name: '50.B.00-EPA-M1-DCE-ELEVATIONS SUR RUES M1B-C' },
+  { id: 'd11', type: 'Plan Élévation', name: '50.B.01-EPA-M1-DCE-ELEVATIONS COEUR D\'ILOT M1B-C' },
+  { id: 'd12', type: 'Plan Élévation', name: '50.C.00-EPA-M1-DCE-ELEVATIONS SUR RUES M1C-C' },
+  { id: 'd13', type: 'Plan Façade',    name: '62.A-EPA-M1-DCE-DETAILS FACADES M1A-C' },
+  { id: 'd14', type: 'Plan Façade',    name: '62.B-EPA-M1-DCE-DETAILS FACADES M1B-C' },
+  { id: 'd15', type: 'Plan Façade',    name: '62.C-EPA-M1-DCE-DETAILS FACADES M1C-C' },
+  { id: 'd16', type: 'Plan Masse',     name: '01-EPA-M1-DCE-PLAN DE MASSE GENERAL' },
+  { id: 'd17', type: 'Plan Masse',     name: '01.A-EPA-M1-DCE-PLAN DE MASSE ILOT A' },
+  { id: 'd18', type: 'CCTP',          name: 'CCTP-LOT 01-GROS OEUVRE' },
+  { id: 'd19', type: 'CCTP',          name: 'CCTP-LOT 02-CHARPENTE COUVERTURE' },
+  { id: 'd20', type: 'CCTP',          name: 'CCTP-LOT 09-MENUISERIES EXTERIEURES' },
+  { id: 'd21', type: 'Notice',         name: 'NOTICE DESCRIPTIVE - LOGEMENTS' },
+  { id: 'd22', type: 'Notice',         name: 'NOTICE ACCESSIBILITE PMR' },
+];
