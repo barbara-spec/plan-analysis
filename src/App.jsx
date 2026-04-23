@@ -3,8 +3,7 @@ import Topbar from './components/layout/Topbar';
 import Stepbar from './components/layout/Stepbar';
 import PlanShell from './components/plan/PlanShell';
 import DocSelector from './components/detection/DocSelector';
-import ElementScopePanel from './components/scope/ElementScopePanel';
-import ExtractionPanel from './components/extraction/ExtractionPanel';
+import IdentificationPanel from './components/identification/IdentificationPanel';
 import VerificationPanel from './components/verification/VerificationPanel';
 import RuleInFocusPopover from './components/RuleInFocusPopover';
 import PopoutPanel from './components/layout/PopoutPanel';
@@ -645,52 +644,40 @@ export default function App() {
                     {/* Panel content */}
                     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                       {currentStep <= 2 && (
-                        <>
-                          <div style={{ flexShrink: 0, maxHeight: '45%', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderBottom: '1px solid #f1f2f4' }}>
-                            <ElementScopePanel
-                              elements={elements}
-                              onToggleScope={handleToggleScope}
-                              onToggleRule={handleToggleRule}
-                              onToggleMetric={handleToggleMetric}
-                              onToggleMethod={handleToggleMethod}
-                              onAddCustomMetric={handleAddCustomMetric}
-                              onRemoveCustomMetric={handleRemoveCustomMetric}
-                              onSetMetricFilter={handleSetMetricFilter}
-                              onExtract={handleExtract}
-                            />
-                          </div>
-                          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                            <ExtractionPanel
-                              elements={elements}
-                              smartFilled={smartFilled}
-                              onSmartSelect={handleSmartSelect}
-                              awaitingSmartSelect={awaitingSmartSelect}
-                              visionStates={taskStates}
-                              visionResults={visionResults}
-                              onLaunchVision={handleLaunchVision}
-                              onAcceptVision={handleAcceptVision}
-                              onDiscardVision={handleDiscardVision}
-                              onVisionRemoveItem={handleVisionRemoveItem}
-                              onVisionAddItem={handleVisionAddItem}
-                              methodOverrides={methodOverrides}
-                              onMethodChange={handleMethodChange}
-                              extraRows={extraRows}
-                              onAddElement={handleAddElement}
-                              activeApt={activeApt}
-                              onInstanceClick={handleInstanceClick}
-                              extraGroups={extraGroups}
-                              onAddGroup={handleAddGroup}
-                              cellValues={cellValues}
-                              onCellSelect={handleCellSelect}
-                              parentAssignments={parentAssignments}
-                              onParentAssign={handleParentAssign}
-                              extractionDone={extractionDone}
-                              activeElementType={activeElementType}
-                              onElementTypeSelect={handleElementTypeSelect}
-                              onVisionItemHover={setHoveredVisionItemId}
-                            />
-                          </div>
-                        </>
+                        <IdentificationPanel
+                          elements={elements}
+                          onToggleScope={handleToggleScope}
+                          onToggleRule={handleToggleRule}
+                          onToggleMetric={handleToggleMetric}
+                          onToggleMethod={handleToggleMethod}
+                          onAddCustomMetric={handleAddCustomMetric}
+                          onRemoveCustomMetric={handleRemoveCustomMetric}
+                          onSetMetricFilter={handleSetMetricFilter}
+                          smartFilled={smartFilled}
+                          onSmartSelect={handleSmartSelect}
+                          awaitingSmartSelect={awaitingSmartSelect}
+                          visionStates={taskStates}
+                          visionResults={visionResults}
+                          onLaunchVision={handleLaunchVision}
+                          onAcceptVision={handleAcceptVision}
+                          onDiscardVision={handleDiscardVision}
+                          onVisionRemoveItem={handleVisionRemoveItem}
+                          onVisionAddItem={handleVisionAddItem}
+                          extraRows={extraRows}
+                          onAddElement={handleAddElement}
+                          activeApt={activeApt}
+                          onInstanceClick={handleInstanceClick}
+                          extraGroups={extraGroups}
+                          onAddGroup={handleAddGroup}
+                          cellValues={cellValues}
+                          onCellSelect={handleCellSelect}
+                          parentAssignments={parentAssignments}
+                          onParentAssign={handleParentAssign}
+                          extractionDone={extractionDone}
+                          activeElementType={activeElementType}
+                          onElementTypeSelect={handleElementTypeSelect}
+                          onVisionItemHover={setHoveredVisionItemId}
+                        />
                       )}
                       {currentStep >= 3 && (
                         <VerificationPanel
@@ -753,52 +740,40 @@ export default function App() {
                 </div>
 
                 {currentStep <= 2 && (
-                  <>
-                    <div style={{ flexShrink: 0, maxHeight: '45%', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderBottom: '1px solid #f1f2f4' }}>
-                      <ElementScopePanel
-                        elements={elements}
-                        onToggleScope={handleToggleScope}
-                        onToggleRule={handleToggleRule}
-                        onToggleMetric={handleToggleMetric}
-                        onToggleMethod={handleToggleMethod}
-                        onAddCustomMetric={handleAddCustomMetric}
-                        onRemoveCustomMetric={handleRemoveCustomMetric}
-                        onSetMetricFilter={handleSetMetricFilter}
-                        onExtract={handleExtract}
-                      />
-                    </div>
-                    <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                      <ExtractionPanel
-                        elements={elements}
-                        smartFilled={smartFilled}
-                        onSmartSelect={handleSmartSelect}
-                        awaitingSmartSelect={awaitingSmartSelect}
-                        visionStates={taskStates}
-                        visionResults={visionResults}
-                        onLaunchVision={handleLaunchVision}
-                        onAcceptVision={handleAcceptVision}
-                        onDiscardVision={handleDiscardVision}
-                        onVisionRemoveItem={handleVisionRemoveItem}
-                        onVisionAddItem={handleVisionAddItem}
-                        methodOverrides={methodOverrides}
-                        onMethodChange={handleMethodChange}
-                        extraRows={extraRows}
-                        onAddElement={handleAddElement}
-                        activeApt={activeApt}
-                        onInstanceClick={handleInstanceClick}
-                        extraGroups={extraGroups}
-                        onAddGroup={handleAddGroup}
-                        cellValues={cellValues}
-                        onCellSelect={handleCellSelect}
-                        parentAssignments={parentAssignments}
-                        onParentAssign={handleParentAssign}
-                        extractionDone={extractionDone}
-                        activeElementType={activeElementType}
-                        onElementTypeSelect={handleElementTypeSelect}
-                        onVisionItemHover={setHoveredVisionItemId}
-                      />
-                    </div>
-                  </>
+                  <IdentificationPanel
+                    elements={elements}
+                    onToggleScope={handleToggleScope}
+                    onToggleRule={handleToggleRule}
+                    onToggleMetric={handleToggleMetric}
+                    onToggleMethod={handleToggleMethod}
+                    onAddCustomMetric={handleAddCustomMetric}
+                    onRemoveCustomMetric={handleRemoveCustomMetric}
+                    onSetMetricFilter={handleSetMetricFilter}
+                    smartFilled={smartFilled}
+                    onSmartSelect={handleSmartSelect}
+                    awaitingSmartSelect={awaitingSmartSelect}
+                    visionStates={taskStates}
+                    visionResults={visionResults}
+                    onLaunchVision={handleLaunchVision}
+                    onAcceptVision={handleAcceptVision}
+                    onDiscardVision={handleDiscardVision}
+                    onVisionRemoveItem={handleVisionRemoveItem}
+                    onVisionAddItem={handleVisionAddItem}
+                    extraRows={extraRows}
+                    onAddElement={handleAddElement}
+                    activeApt={activeApt}
+                    onInstanceClick={handleInstanceClick}
+                    extraGroups={extraGroups}
+                    onAddGroup={handleAddGroup}
+                    cellValues={cellValues}
+                    onCellSelect={handleCellSelect}
+                    parentAssignments={parentAssignments}
+                    onParentAssign={handleParentAssign}
+                    extractionDone={extractionDone}
+                    activeElementType={activeElementType}
+                    onElementTypeSelect={handleElementTypeSelect}
+                    onVisionItemHover={setHoveredVisionItemId}
+                  />
                 )}
                 {currentStep >= 3 && (
                   <VerificationPanel
