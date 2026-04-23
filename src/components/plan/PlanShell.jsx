@@ -10,7 +10,7 @@ const MODE_CONFIG = {
 export default function PlanShell({
   docLoaded, onSelectDoc,
   selectedPlan, scales, onScaleChange,
-  mode, extractionDone,
+  mode, extractionDone, elements,
   activeApt, onAptClick,
   activeElementType,
   visionDoorItems,
@@ -60,6 +60,7 @@ export default function PlanShell({
         <PlanCanvas
           mode={mode}
           extractionDone={extractionDone}
+          elements={elements}
           activeApt={activeApt}
           onAptClick={onAptClick}
           activeElementType={activeElementType}

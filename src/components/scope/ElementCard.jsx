@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { METRIC_LABELS } from '../../data/elementTypes';
 
 const INDIGO = '#5151cd';
@@ -42,8 +42,150 @@ function MethodToggle({ method, onChange }) {
   );
 }
 
-export default function ElementCard({ element, onToggleScope, onToggleRule, onToggleMetric, onToggleMethod, onAddCustomMetric, onRemoveCustomMetric }) {
+// ─── Metric chip with inline filter popover ───────────────────────────────────
+
+function MetricChip({ metricId, label, active, filter, onToggle, onSetFilter }) {
+  const [open, setOpen]   = useState(false);
+  const [op,  setOp]      = useState(filter?.op  ?? '>');
+  const [val, setVal]     = useState(filter?.value != null ? String(filter.value) : '');
+  const popRef = useRef(null);
+
+  // Keep local state in sync when filter prop changes externally
+  useEffect(() => {
+    setOp(filter?.op ?? '>');
+    setVal(filter?.value != null ? String(filter.value) : '');
+  }, [filter]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const fn = e => { if (popRef.current && !popRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', fn);
+    return () => document.removeEventListener('mousedown', fn);
+  }, [open]);
+
+  const apply = () => {
+    const v = parseFloat(val);
+    if (!isNaN(v)) onSetFilter?.(metricId, { op, value: v });
+    setOpen(false);
+  };
+
+  const clear = () => {
+    onSetFilter?.(metricId, null);
+    setVal('');
+    setOpen(false);
+  };
+
+  const hasFilter = filter != null;
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle' }}>
+      {/* Toggle button */}
+      <button
+        onClick={onToggle}
+        className="text-[10px] font-medium py-0.5 transition-colors"
+        style={{
+          paddingLeft: 6, paddingRight: hasFilter && active ? 4 : 6,
+          color: active ? INDIGO : GRAY,
+          background: active ? 'rgba(81,81,205,0.07)' : 'transparent',
+          borderRadius: hasFilter && active ? '4px 0 0 4px' : 4,
+        }}
+      >
+        {active ? '✓ ' : '+ '}{label}
+      </button>
+
+      {/* Filter pill — only when active */}
+      {active && (
+        <button
+          onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+          title={hasFilter ? 'Modifier le filtre' : 'Ajouter un filtre'}
+          style={{
+            display: 'flex', alignItems: 'center',
+            fontSize: 9, fontWeight: 700, lineHeight: 1,
+            padding: '3px 5px',
+            color:      hasFilter ? 'white' : 'rgba(81,81,205,0.5)',
+            background: hasFilter ? INDIGO  : 'rgba(81,81,205,0.07)',
+            border: 'none', cursor: 'pointer',
+            borderLeft: '1px solid rgba(81,81,205,0.15)',
+            borderRadius: '0 4px 4px 0',
+            transition: 'all .12s',
+          }}
+        >
+          {hasFilter ? `${filter.op}${filter.value}` : (
+            <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M1 2h8M2.5 5h5M4 8h2"/>
+            </svg>
+          )}
+        </button>
+      )}
+
+      {/* Filter popover */}
+      {open && (
+        <div ref={popRef} style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
+          background: 'white', border: '1px solid #eef0f3', borderRadius: 10,
+          padding: '10px 10px 8px', minWidth: 158,
+          boxShadow: '0 8px 24px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.06)',
+        }}>
+          <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>
+            Filtre — {label}
+          </div>
+          {/* Operator */}
+          <div style={{ display: 'flex', gap: 3, marginBottom: 7 }}>
+            {['>', '<', '≥', '≤'].map(o => (
+              <button key={o} onClick={() => setOp(o)} style={{
+                flex: 1, padding: '4px 0', borderRadius: 4, fontSize: 12, fontWeight: 700,
+                background: op === o ? INDIGO : '#f4f5f7',
+                color:      op === o ? 'white' : '#636464',
+                border:     op === o ? 'none'  : '1px solid #eef0f3',
+                cursor: 'pointer', transition: 'all .1s',
+              }}>{o}</button>
+            ))}
+          </div>
+          {/* Value */}
+          <input
+            autoFocus
+            type="number"
+            value={val}
+            onChange={e => setVal(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') apply(); if (e.key === 'Escape') setOpen(false); }}
+            placeholder="Valeur…"
+            style={{
+              width: '100%', padding: '5px 8px', fontSize: 11,
+              border: '1px solid #e5e7eb', borderRadius: 6, outline: 'none',
+              marginBottom: 7, boxSizing: 'border-box', color: '#111827',
+            }}
+          />
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 5 }}>
+            <button
+              onClick={apply}
+              disabled={isNaN(parseFloat(val))}
+              style={{
+                flex: 1, padding: '5px 0', borderRadius: 6, fontSize: 10, fontWeight: 600,
+                background: !isNaN(parseFloat(val)) ? INDIGO : '#e5e7eb',
+                color:      !isNaN(parseFloat(val)) ? 'white' : '#9ca3af',
+                border: 'none', cursor: !isNaN(parseFloat(val)) ? 'pointer' : 'default',
+              }}
+            >Appliquer</button>
+            {hasFilter && (
+              <button onClick={clear} style={{
+                padding: '5px 9px', borderRadius: 6, fontSize: 10,
+                background: '#f4f5f7', color: '#636464', border: 'none', cursor: 'pointer',
+              }}>Effacer</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Element card ─────────────────────────────────────────────────────────────
+
+export default function ElementCard({ element, onToggleScope, onToggleRule, onToggleMetric, onToggleMethod, onAddCustomMetric, onRemoveCustomMetric, onSetMetricFilter }) {
   const { inScope, rules, metrics } = element;
+  const metricFilters = element.metricFilters ?? {};
   const activeRules = rules.filter(r => r.active);
   const methodBadge = METHOD_BADGE[element.method];
   const isTextMethod = element.method === 'text';
@@ -115,19 +257,17 @@ export default function ElementCard({ element, onToggleScope, onToggleRule, onTo
       {inScope && (
         <div className="flex flex-wrap gap-1.5">
           {/* Preset metrics (exclude count) */}
-          {METRIC_LABELS.filter(m => m.id !== 'count').map(m => {
-            const active = !!metrics[m.id];
-            return (
-              <button
-                key={m.id}
-                onClick={() => onToggleMetric(element.id, m.id)}
-                className="text-[10px] font-medium px-1.5 py-0.5 rounded transition-colors"
-                style={{ color: active ? INDIGO : GRAY, background: active ? 'rgba(81,81,205,0.07)' : 'transparent' }}
-              >
-                {active ? '✓ ' : '+ '}{m.label}
-              </button>
-            );
-          })}
+          {METRIC_LABELS.filter(m => m.id !== 'count').map(m => (
+            <MetricChip
+              key={m.id}
+              metricId={m.id}
+              label={m.label}
+              active={!!metrics[m.id]}
+              filter={metricFilters[m.id] ?? null}
+              onToggle={() => onToggleMetric(element.id, m.id)}
+              onSetFilter={(mId, f) => onSetMetricFilter?.(element.id, mId, f)}
+            />
+          ))}
 
           {/* Custom metrics — text method only */}
           {isTextMethod && customMetrics.map(cm => (

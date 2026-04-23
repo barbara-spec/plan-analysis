@@ -18,7 +18,7 @@ function ArrowRightIcon() {
   );
 }
 
-export default function ElementScopePanel({ elements, onToggleScope, onToggleRule, onToggleMetric, onToggleMethod, onAddCustomMetric, onRemoveCustomMetric, onExtract }) {
+export default function ElementScopePanel({ elements, onToggleScope, onToggleRule, onToggleMetric, onToggleMethod, onAddCustomMetric, onRemoveCustomMetric, onSetMetricFilter, onExtract }) {
   const inScopeElements = elements.filter(e => e.inScope);
   const totalMetrics = inScopeElements.reduce((sum, el) =>
     sum + Object.values(el.metrics).filter(Boolean).length, 0
@@ -67,6 +67,7 @@ export default function ElementScopePanel({ elements, onToggleScope, onToggleRul
               onToggleMethod={(method) => onToggleMethod(el.id, method)}
               onAddCustomMetric={onAddCustomMetric}
               onRemoveCustomMetric={onRemoveCustomMetric}
+              onSetMetricFilter={onSetMetricFilter}
             />
           ))}
         </div>

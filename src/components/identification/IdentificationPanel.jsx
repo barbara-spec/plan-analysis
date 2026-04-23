@@ -1,7 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import ExtractionResultTable from '../extraction/ExtractionResultTable';
-import GroupingPanel from '../extraction/GroupingPanel';
 import { METRIC_LABELS } from '../../data/elementTypes';
+import { EXTRACTION_RESULTS, RESULT_COLS } from '../../data/extractionResults';
+
+function checkFilter(filter, rawValue) {
+  if (!filter) return null;
+  const num = parseFloat(String(rawValue));
+  if (isNaN(num)) return null;
+  if (filter.op === '>'  && num <= filter.value) return 'fail';
+  if (filter.op === '<'  && num >= filter.value) return 'fail';
+  if (filter.op === '≥'  && num <  filter.value) return 'fail';
+  if (filter.op === '≤'  && num >  filter.value) return 'fail';
+  return 'pass';
+}
 
 const INDIGO = '#5151cd';
 const INK    = '#111827';
@@ -366,6 +376,7 @@ function UnifiedElementCard({
   visionState, visionResultItems,
   onLaunchVision, onAcceptVision, onDiscardVision, onVisionRemoveItem, onVisionAddItem,
   activeElementType, onElementTypeSelect, onVisionItemHover,
+  extractionDone, activeApt, onInstanceClick,
 }) {
   const { inScope, rules = [], metrics = {}, customMetrics = [] } = element;
   const metricFilters = element.metricFilters ?? {};
@@ -507,8 +518,65 @@ function UnifiedElementCard({
       {showExtractionSection && (
         <div style={{ borderTop: '1px solid #f0f1f3', background: '#fcfcfd', padding: '8px 12px 10px' }}>
 
-          {/* Text: per-metric selection rows */}
-          {isText && allTextMetricIds.length > 0 && allTextMetricIds.map(metricId => {
+          {/* Text: extraction done → compact instance list */}
+          {isText && extractionDone && (() => {
+            const instances = EXTRACTION_RESULTS[element.id] ?? [];
+            if (instances.length === 0) return null;
+            const primaryMetricId = activePresetMetrics[0]?.id ?? null;
+            return (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <CheckIcon size={11} /> {instances.length} trouvés
+                  </span>
+                  <button
+                    onClick={() => onSmartSelect(element.id, primaryMetricId ?? 'surface')}
+                    style={{ fontSize: 10, color: MUTED, background: 'none', border: 'none', cursor: 'pointer', padding: '1px 4px' }}
+                    title="Relancer l'extraction"
+                  >↺ Relancer</button>
+                </div>
+                {instances.map(inst => {
+                  const isActiveRow = activeApt && activeApt === inst.planRef;
+                  const primaryVal = primaryMetricId ? inst[primaryMetricId] : null;
+                  const hasFail = Object.entries(metricFilters).some(([mId, f]) =>
+                    checkFilter(f, inst[mId]) === 'fail'
+                  );
+                  return (
+                    <div
+                      key={inst.id}
+                      onClick={() => onInstanceClick?.(inst.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '4px 0', borderBottom: '1px solid #f5f5f6',
+                        cursor: inst.planRef ? 'pointer' : 'default',
+                        background: isActiveRow ? 'rgba(81,81,205,0.04)' : 'transparent',
+                        paddingLeft: isActiveRow ? 6 : 0,
+                        boxShadow: isActiveRow ? `inset 3px 0 0 ${INDIGO}` : 'none',
+                        borderRadius: 2,
+                        transition: 'background .1s',
+                      }}
+                    >
+                      {hasFail
+                        ? <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} title="Valeur hors seuil" />
+                        : <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />
+                      }
+                      <span style={{ flex: 1, fontSize: 11, color: isActiveRow ? INDIGO : '#374151', fontWeight: isActiveRow ? 500 : 400 }}>
+                        {inst.label}
+                      </span>
+                      {primaryVal && (
+                        <span style={{ fontSize: 11, color: hasFail ? '#f59e0b' : '#6b7280', fontFamily: 'ui-monospace, monospace', flexShrink: 0 }}>
+                          {primaryVal}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* Text: not yet extracted → per-metric selection rows */}
+          {isText && !extractionDone && allTextMetricIds.length > 0 && allTextMetricIds.map(metricId => {
             const label = METRIC_MAP[metricId] ?? customMetrics.find(m => m.id === metricId)?.label ?? metricId;
             const isAwaiting = awaitingSmartSelect?.type === 'metric'
               && awaitingSmartSelect?.elementId === element.id
@@ -585,43 +653,9 @@ export default function IdentificationPanel({
   extractionDone,
   activeElementType, onElementTypeSelect, onVisionItemHover,
 }) {
-  const [showGrouping,     setShowGrouping]     = useState(false);
   const [showNewGroupForm, setShowNewGroupForm] = useState(false);
 
   const inScopeElements = (elements ?? []).filter(e => e.inScope);
-
-  // ── When extraction is complete, hand off to result table ──────────────────
-  if (extractionDone) {
-    if (showGrouping) {
-      return (
-        <GroupingPanel
-          elements={[...inScopeElements, ...(extraGroups ?? [])]}
-          extraGroups={extraGroups ?? []}
-          parentAssignments={parentAssignments}
-          onParentAssign={onParentAssign}
-          onBack={() => setShowGrouping(false)}
-        />
-      );
-    }
-    return (
-      <ExtractionResultTable
-        elements={elements}
-        taskStates={{ ext_logements: 'done', ext_portes: 'done', ext_stationnement: 'done' }}
-        smartFilled={smartFilled}
-        onSmartSelect={onSmartSelect}
-        extraRows={extraRows}
-        onAddElement={onAddElement}
-        activeApt={activeApt}
-        onInstanceClick={onInstanceClick}
-        extraGroups={extraGroups}
-        onAddGroup={onAddGroup}
-        cellValues={cellValues}
-        onCellSelect={onCellSelect}
-        parentAssignments={parentAssignments}
-        onShowGrouping={() => setShowGrouping(true)}
-      />
-    );
-  }
 
   // ── Header progress ────────────────────────────────────────────────────────
   let totalSteps = 0, doneSteps = 0;
@@ -657,7 +691,11 @@ export default function IdentificationPanel({
             {inScopeElements.length} types · {totalSteps} métriques
           </span>
         </div>
-        {hasStarted ? (
+        {extractionDone ? (
+          <p style={{ fontSize: 11, color: '#16a34a', lineHeight: 1.5, marginTop: 4, fontWeight: 500 }}>
+            ✓ Extraction terminée — survolez le plan pour voir les données
+          </p>
+        ) : hasStarted ? (
           <div style={{ height: 3, background: '#f1f2f4', borderRadius: 2, overflow: 'hidden' }}>
             <div style={{ height: '100%', borderRadius: 2, background: pct === 100 ? '#22c55e' : INDIGO, width: `${pct}%`, transition: 'width .3s ease' }} />
           </div>
@@ -696,6 +734,9 @@ export default function IdentificationPanel({
             activeElementType={activeElementType}
             onElementTypeSelect={onElementTypeSelect}
             onVisionItemHover={onVisionItemHover}
+            extractionDone={extractionDone}
+            activeApt={activeApt}
+            onInstanceClick={onInstanceClick}
           />
         ))}
 
@@ -724,6 +765,9 @@ export default function IdentificationPanel({
             activeElementType={activeElementType}
             onElementTypeSelect={onElementTypeSelect}
             onVisionItemHover={onVisionItemHover}
+            extractionDone={extractionDone}
+            activeApt={activeApt}
+            onInstanceClick={onInstanceClick}
           />
         ))}
 

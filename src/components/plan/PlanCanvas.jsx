@@ -211,9 +211,34 @@ function aiAptStatus(aptId) {
   return 'idle';
 }
 
+// Check a metric filter against a raw string value
+function checkFilter(filter, rawValue) {
+  if (!filter) return null;
+  const num = parseFloat(String(rawValue ?? ''));
+  if (isNaN(num)) return null;
+  if (filter.op === '>'  && num <= filter.value) return 'fail';
+  if (filter.op === '<'  && num >= filter.value) return 'fail';
+  if (filter.op === '≥'  && num <  filter.value) return 'fail';
+  if (filter.op === '≤'  && num >  filter.value) return 'fail';
+  return 'pass';
+}
+
+// Compute pass/fail status for an apartment based on its element's configured metric filters
+function aptExtractionStatus(aptId, elements) {
+  const entry = APT_INSTANCE_MAP[aptId];
+  if (!entry) return null;
+  const { inst, elementId } = entry;
+  const element = elements?.find(e => e.id === elementId);
+  const filters = element?.metricFilters ?? {};
+  if (Object.keys(filters).length === 0) return 'extracted';
+  const anyFail = Object.entries(filters).some(([mId, f]) => checkFilter(f, inst[mId]) === 'fail');
+  return anyFail ? 'fail' : 'pass';
+}
+
 export default function PlanCanvas({
   mode,
   extractionDone,
+  elements,
   activeApt, onAptClick,
   activeElementType,
   visionDoorItems = [],
@@ -338,7 +363,7 @@ export default function PlanCanvas({
           <g
             key={apt.id}
             onClick={() => textSelectMode ? onTextLabelClick?.(apt.id) : onAptClick?.(apt.id)}
-            onMouseEnter={() => mode === 'extraction' && extractionDone && setHoveredApt(apt.id)}
+            onMouseEnter={() => mode === 'extraction' && APT_INSTANCE_MAP[apt.id] && setHoveredApt(apt.id)}
             onMouseLeave={() => setHoveredApt(null)}
             style={{
               cursor: textSelectMode ? 'crosshair' : 'pointer',
@@ -453,26 +478,28 @@ export default function PlanCanvas({
               </text>
             )}
 
-            {/* Extraction highlight: red bounding box */}
-            {mode === 'extraction' && extractionDone && (
-              <rect
-                x={px + 2} y={py + 2} width={pw - 4} height={ph - 4}
-                fill="rgba(239,68,68,0.04)"
-                stroke="#ef4444"
-                strokeWidth={1.5}
-                strokeDasharray="0"
-                rx={2}
-                style={{ pointerEvents: 'none' }}
-              />
-            )}
-
-            {/* Low-confidence marker (extraction mode) */}
-            {mode === 'extraction' && extractionDone && apt.conf < 80 && (
-              <g>
-                <circle cx={px + pw - 10} cy={py + 10} r={8} fill="#f59e0b" />
-                <text x={px + pw - 10} y={py + 14} textAnchor="middle" fontSize={9} fill="white" fontWeight="700">!</text>
-              </g>
-            )}
+            {/* Extraction status indicator */}
+            {mode === 'extraction' && (() => {
+              const status = aptExtractionStatus(apt.id, elements);
+              if (!status) return null;
+              if (status === 'fail') return (
+                <g style={{ pointerEvents: 'none' }}>
+                  <circle cx={px + pw - 11} cy={py + 11} r={9} fill="#f59e0b" opacity={0.9} />
+                  <text x={px + pw - 11} y={py + 15} textAnchor="middle" fontSize={10} fill="white" fontWeight="800">!</text>
+                </g>
+              );
+              if (status === 'pass') return (
+                <g style={{ pointerEvents: 'none' }}>
+                  <circle cx={px + pw - 11} cy={py + 11} r={9} fill="#22c55e" opacity={0.9} />
+                  <text x={px + pw - 11} y={py + 15.5} textAnchor="middle" fontSize={11} fill="white" fontWeight="800">✓</text>
+                </g>
+              );
+              // 'extracted' — subtle dot, no filter configured
+              return (
+                <circle cx={px + pw - 11} cy={py + 11} r={5}
+                  fill="rgba(81,81,205,0.35)" style={{ pointerEvents: 'none' }} />
+              );
+            })()}
           </g>
         );
       })}
@@ -495,24 +522,41 @@ export default function PlanCanvas({
         if (!apt) return null;
         const px = toX(apt.poly.x / 8), py = toY(apt.poly.y / 5);
         const pw = toX(apt.poly.w / 8), ph = toY(apt.poly.h / 5);
-        const { inst } = entry;
+        const { inst, elementId } = entry;
+        const element = elements?.find(e => e.id === elementId);
+        const metricFilters = element?.metricFilters ?? {};
         const metrics = RESULT_COLS.filter(c => inst[c.id] != null);
-        const cardW = 158, rowH = 14, cardH = 26 + metrics.length * rowH;
-        const cardX = px + pw + 6 > VW - cardW ? px - cardW - 6 : px + pw + 6;
+        const cardW = 168, rowH = 15, cardH = 30 + metrics.length * rowH;
+        const cardX = px + pw + 8 > VW - cardW ? px - cardW - 8 : px + pw + 8;
         const cardY = Math.min(py, VH - cardH - 4);
         return (
           <g style={{ pointerEvents: 'none' }}>
-            <rect x={cardX} y={cardY} width={cardW} height={cardH} rx={6}
+            <rect x={cardX} y={cardY} width={cardW} height={cardH} rx={7}
               fill="white" stroke="#e5e7eb" strokeWidth={1}
-              style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,.12))' }} />
-            <text x={cardX + 10} y={cardY + 15} fontSize={10} fontWeight="600" fill="#111827">{inst.label}</text>
-            {metrics.map((col, i) => (
-              <g key={col.id}>
-                <text x={cardX + 10} y={cardY + 26 + i * rowH} fontSize={9} fill="#858586">{col.label}</text>
-                <text x={cardX + cardW - 10} y={cardY + 26 + i * rowH} fontSize={9} fill="#111827"
-                  textAnchor="end" fontFamily="ui-monospace, monospace">{inst[col.id]}</text>
-              </g>
-            ))}
+              style={{ filter: 'drop-shadow(0 4px 16px rgba(0,0,0,.14))' }} />
+            {/* Title */}
+            <text x={cardX + 11} y={cardY + 17} fontSize={10.5} fontWeight="700" fill="#111827">{inst.label}</text>
+            <line x1={cardX + 1} y1={cardY + 22} x2={cardX + cardW - 1} y2={cardY + 22} stroke="#f1f2f4" strokeWidth={1} />
+            {/* Metric rows */}
+            {metrics.map((col, i) => {
+              const filterResult = checkFilter(metricFilters[col.id], inst[col.id]);
+              const valColor = filterResult === 'fail' ? '#f59e0b' : filterResult === 'pass' ? '#16a34a' : '#374151';
+              return (
+                <g key={col.id}>
+                  <text x={cardX + 11} y={cardY + 31 + i * rowH} fontSize={9} fill="#9ca3af">{col.label}</text>
+                  {filterResult === 'fail' && (
+                    <circle cx={cardX + cardW - 20} cy={cardY + 27 + i * rowH} r={5} fill="#f59e0b" />
+                  )}
+                  {filterResult === 'pass' && (
+                    <circle cx={cardX + cardW - 20} cy={cardY + 27 + i * rowH} r={5} fill="#22c55e" />
+                  )}
+                  <text x={filterResult ? cardX + cardW - 28 : cardX + cardW - 10} y={cardY + 31 + i * rowH}
+                    fontSize={10} fill={valColor} textAnchor="end" fontFamily="ui-monospace, monospace" fontWeight={filterResult ? '600' : '400'}>
+                    {inst[col.id]}
+                  </text>
+                </g>
+              );
+            })}
           </g>
         );
       })()}

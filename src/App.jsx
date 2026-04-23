@@ -549,6 +549,7 @@ export default function App() {
                 onScaleChange={(idx, s) => setScales(prev => ({ ...prev, [idx]: s }))}
                 mode={planMode}
                 extractionDone={extractionDone}
+                elements={elements}
                 activeApt={activeApt}
                 onAptClick={handleAptClick}
                 activeElementType={activeElementType}
