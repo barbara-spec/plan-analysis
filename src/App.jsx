@@ -490,9 +490,16 @@ export default function App() {
     : currentStep === 2 ? 'extraction'
     : 'verification';
 
+  // Conceptual step: steps 1+2 are both "Identification", step 3 is "Vérification"
+  const conceptualStep = currentStep <= 2 ? 1 : 2;
+  const conceptualVisitedSteps = new Set([1, ...(visitedSteps.has(3) ? [2] : [])]);
+  const handleConceptualStepClick = (n) => {
+    if (n === 1) goToStep(1);
+    if (n === 2) goToStep(3);
+  };
+
   const handleCta = () => {
-    if (currentStep === 1 && docLoaded) goToStep(2);
-    else if (currentStep === 2 && extractionDone) goToStep(3);
+    if (currentStep === 2 && extractionDone) goToStep(3);
   };
 
   const ctaLabel =
@@ -504,29 +511,27 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      {/* Top bar — only show on steps 2+ */}
-      {currentStep > 1 && (
+      {/* Top bar + stepbar — visible once a doc is loaded */}
+      {docLoaded ? (
         <>
           <Topbar ctaLabel={ctaLabel} onCta={handleCta} />
           <Stepbar
-            currentStep={currentStep}
-            visitedSteps={visitedSteps}
-            onStepClick={goToStep}
+            currentStep={conceptualStep}
+            visitedSteps={conceptualVisitedSteps}
+            onStepClick={handleConceptualStepClick}
             selectedPlanName={null}
           />
         </>
-      )}
-
-      {/* Project header — always visible */}
-      {currentStep === 1 && (
+      ) : (
+        /* Project header — only before doc selection */
         <div className="flex items-center px-5 flex-shrink-0 bg-white"
           style={{ height: 41, borderBottom: '1px solid #f1f2f4' }}>
           <span className="text-sm font-semibold text-gray-900">Résidence Les Acacias — APD</span>
         </div>
       )}
 
-      {/* Document banner — visible when doc loaded */}
-      {docLoaded && currentStep === 1 && <Banner selectedDocId={selectedDocId} />}
+      {/* Document banner — visible on identification steps */}
+      {docLoaded && currentStep <= 2 && <Banner selectedDocId={selectedDocId} />}
 
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', position: 'relative' }}>
         <LeftSidebar />
@@ -597,17 +602,17 @@ export default function App() {
                     </svg>
                   </button>
                   {/* Step dots */}
-                  {[1,2,3].map(s => (
+                  {[1,2].map(s => (
                     <div key={s} style={{
                       width: 6, height: 6, borderRadius: '50%',
-                      background: s === currentStep ? '#5151cd' : '#e5e7eb',
+                      background: s === conceptualStep ? '#5151cd' : '#e5e7eb',
                     }} />
                   ))}
                 </div>
 
                 {/* Portal: full panel content in new window */}
                 <PopoutPanel
-                  title={`Plan Analyse — ${currentStep === 1 ? 'Périmètre' : currentStep === 2 ? 'Identification' : 'Vérification'}`}
+                  title={`Plan Analyse — ${currentStep <= 2 ? 'Identification' : 'Vérification'}`}
                   onClose={() => setPanelDetached(false)}
                 >
                   <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'white' }}>
@@ -618,7 +623,7 @@ export default function App() {
                       borderBottom: '1px solid #f1f2f4', background: '#fafafa',
                     }}>
                       <span style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', letterSpacing: '0.02em' }}>
-                        {currentStep === 1 ? 'Périmètre' : currentStep === 2 ? 'Identification' : 'Vérification'}
+                        {currentStep <= 2 ? 'Identification' : 'Vérification'}
                       </span>
                       <button
                         onClick={() => setPanelDetached(false)}

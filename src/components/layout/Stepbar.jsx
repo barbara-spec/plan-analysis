@@ -1,7 +1,6 @@
 const STEPS = [
-  { n: 1, label: 'Sélection' },
-  { n: 2, label: 'Extraction' },
-  { n: 3, label: 'Vérification' },
+  { n: 1, label: 'Identification' },
+  { n: 2, label: 'Vérification' },
 ];
 
 export default function Stepbar({ currentStep, visitedSteps, onStepClick, selectedPlanName }) {
