@@ -319,6 +319,15 @@ export default function App() {
       customMetrics: [...(e.customMetrics ?? []), { id, label }],
     }));
   };
+  const handleSetMetricFilter = (elId, metricId, filter) => {
+    setElements(prev => prev.map(e => e.id !== elId ? e : {
+      ...e,
+      metricFilters: filter
+        ? { ...(e.metricFilters ?? {}), [metricId]: filter }
+        : Object.fromEntries(Object.entries(e.metricFilters ?? {}).filter(([k]) => k !== metricId)),
+    }));
+  };
+
   const handleRemoveCustomMetric = (elId, metricId) => {
     setElements(prev => prev.map(e => e.id !== elId ? e : {
       ...e,
@@ -640,6 +649,7 @@ export default function App() {
                           onToggleMethod={handleToggleMethod}
                           onAddCustomMetric={handleAddCustomMetric}
                           onRemoveCustomMetric={handleRemoveCustomMetric}
+                          onSetMetricFilter={handleSetMetricFilter}
                           onExtract={handleExtract}
                         />
                       )}
@@ -743,6 +753,7 @@ export default function App() {
                     onToggleMethod={handleToggleMethod}
                     onAddCustomMetric={handleAddCustomMetric}
                     onRemoveCustomMetric={handleRemoveCustomMetric}
+                    onSetMetricFilter={handleSetMetricFilter}
                     onExtract={handleExtract}
                   />
                 )}
