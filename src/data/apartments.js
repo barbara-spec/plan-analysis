@@ -25,7 +25,8 @@ export const apartments = [
       { id: 'wA201_2', code: 'F02', side: 'top', offset: 152, w: 72, dims: '150×135' },
     ],
     doors: [
-      { id: 'dA201_1', side: 'bottom', offset: 96, w: 36, swing: 'right' },
+      { id: 'dA201_1', side: 'bottom', offset: 96,  w: 36, swing: 'right' },
+      { id: 'dA201_2', side: 'bottom', offset: 178, w: 34, swing: 'left'  },
     ],
   },
   {

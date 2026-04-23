@@ -13,6 +13,8 @@ export default function PlanShell({
   mode, extractionDone,
   activeApt, onAptClick,
   activeElementType,
+  visionDoorItems,
+  hoveredVisionItemId,
   overrides, editedValues,
   zoomedApt,
   textSelectMode,
@@ -61,6 +63,8 @@ export default function PlanShell({
           activeApt={activeApt}
           onAptClick={onAptClick}
           activeElementType={activeElementType}
+          visionDoorItems={visionDoorItems}
+          hoveredVisionItemId={hoveredVisionItemId}
           overrides={overrides}
           editedValues={editedValues}
           zoomedApt={zoomedApt}

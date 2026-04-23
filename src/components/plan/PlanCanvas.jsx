@@ -11,6 +11,12 @@ Object.entries(EXTRACTION_RESULTS).forEach(([elementId, instances]) => {
   });
 });
 
+// Static lookup: doorId → { apt, door } — used for vision hover highlights
+const DOOR_MAP = {};
+apartments.forEach(apt => {
+  (apt.doors ?? []).forEach(door => { DOOR_MAP[door.id] = { apt, door }; });
+});
+
 const VW = 800, VH = 500;
 const HALL = { y: 220, h: 60 };
 
@@ -135,6 +141,54 @@ function DoorSymbol({ door, poly }) {
   );
 }
 
+// Overlay shown on the plan for each vision-detected door.
+// Ambient (all detected): small numbered bubble at the door gap.
+// Hovered item: prominent bounding box around the door opening.
+function DoorHighlight({ item, index, isHovered }) {
+  const entry = DOOR_MAP[item.planRef];
+  if (!entry) return null;
+  const { apt, door } = entry;
+
+  // Coordinates are in SVG px (the toX/toY round-trip is a no-op for this data)
+  const px = apt.poly.x, py = apt.poly.y, ph = apt.poly.h;
+  const wallY = door.side === 'bottom' ? py + ph : py;
+  const gapX  = px + door.offset;
+  const dw    = door.w;
+  const cx    = gapX + dw / 2;
+  const DEPTH = 32, PAD = 6;
+
+  // Box extends into the room (away from the wall)
+  const boxY  = door.side === 'bottom' ? wallY - DEPTH : wallY;
+  const boxH  = DEPTH + PAD;
+  // Bubble sits just inside the room, centred on the gap
+  const bubY  = door.side === 'bottom' ? wallY - 12 : wallY + 12;
+
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      {/* Hover bounding box */}
+      {isHovered && (
+        <rect
+          x={gapX - PAD} y={boxY}
+          width={dw + PAD * 2} height={boxH}
+          fill="rgba(81,81,205,0.10)"
+          stroke="#5151cd" strokeWidth={2} rx={3}
+        />
+      )}
+      {/* Numbered bubble — always visible when vision review is open */}
+      <circle
+        cx={cx} cy={bubY}
+        r={isHovered ? 10 : 8}
+        fill={isHovered ? '#5151cd' : 'rgba(99,99,205,0.72)'}
+        style={{ transition: 'r 0.15s, fill 0.15s' }}
+      />
+      <text x={cx} y={bubY + 3.5}
+        textAnchor="middle" fontSize={9} fontWeight="700" fill="white">
+        {index + 1}
+      </text>
+    </g>
+  );
+}
+
 const STATUS_COLOR = {
   pass:           { fill: '#22c55e', stroke: '#16a34a', light: '#dcfce7' },
   fail:           { fill: '#ef4444', stroke: '#dc2626', light: '#fee2e2' },
@@ -162,6 +216,8 @@ export default function PlanCanvas({
   extractionDone,
   activeApt, onAptClick,
   activeElementType,
+  visionDoorItems = [],
+  hoveredVisionItemId,
   overrides, editedValues,
   zoomedApt,
   textSelectMode,
@@ -420,6 +476,16 @@ export default function PlanCanvas({
           </g>
         );
       })}
+
+      {/* Vision door highlights — numbered bubbles + hover bounding box */}
+      {visionDoorItems.map((item, idx) => (
+        <DoorHighlight
+          key={item.id}
+          item={item}
+          index={idx}
+          isHovered={hoveredVisionItemId === item.id}
+        />
+      ))}
 
       {/* Extraction hover card */}
       {hoveredApt && (() => {

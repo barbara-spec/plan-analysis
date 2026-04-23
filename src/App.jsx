@@ -133,12 +133,16 @@ function computeEvaluations(elements, taskStates, visionResults, methodOverrides
 }
 
 // Mock vision detection results per element type
+// planRef links each detected item to an actual door/window id in apartments.js
 const VISION_MOCK = {
-  doors:   [
-    { id: 'v_d1', label: 'Porte 1', width: '90 cm' }, { id: 'v_d2', label: 'Porte 2', width: '78 cm' },
-    { id: 'v_d3', label: 'Porte 3', width: '80 cm' }, { id: 'v_d4', label: 'Porte 4', width: '90 cm' },
-    { id: 'v_d5', label: 'Porte 5', width: '83 cm' }, { id: 'v_d6', label: 'Porte 6', width: '80 cm' },
-    { id: 'v_d7', label: 'Porte 7', width: '80 cm' },
+  doors: [
+    { id: 'v_d1', label: 'Porte 1', width: '90 cm', planRef: 'dA101_1' },
+    { id: 'v_d2', label: 'Porte 2', width: '78 cm', planRef: 'dA201_1' },
+    { id: 'v_d3', label: 'Porte 3', width: '80 cm', planRef: 'dA201_2' },
+    { id: 'v_d4', label: 'Porte 4', width: '90 cm', planRef: 'dA301_1' },
+    { id: 'v_d5', label: 'Porte 5', width: '83 cm', planRef: 'dA102_1' },
+    { id: 'v_d6', label: 'Porte 6', width: '80 cm', planRef: 'dA202_1' },
+    { id: 'v_d7', label: 'Porte 7', width: '80 cm', planRef: 'dA302_1' },
   ],
   windows: [
     { id: 'v_w1', label: 'Fenêtre 1', width: '120 cm' },
@@ -224,6 +228,9 @@ export default function App() {
   const [drawingMode, setDrawingMode] = useState(null); // { elementId } | null
   const [extraRows, setExtraRows] = useState({}); // { [elementId]: row[] }
   const [extraGroups, setExtraGroups] = useState([]); // [{ id, label, method, metrics }]
+
+  // Hovered item in a vision review list → highlights it on the plan
+  const [hoveredVisionItemId, setHoveredVisionItemId] = useState(null);
 
   // Method overrides: user can switch text ↔ vision per element
   const [methodOverrides, setMethodOverrides] = useState({}); // { [elementId]: 'text' | 'vision' }
@@ -533,6 +540,12 @@ export default function App() {
                 activeApt={activeApt}
                 onAptClick={handleAptClick}
                 activeElementType={activeElementType}
+                visionDoorItems={
+                  (taskStates['vision_doors'] === 'review' || taskStates['vision_doors'] === 'done')
+                    ? (visionResults['doors'] ?? []).filter(i => i.planRef)
+                    : []
+                }
+                hoveredVisionItemId={hoveredVisionItemId}
                 overrides={overrides}
                 editedValues={editedValues}
                 zoomedApt={zoomedApt}
@@ -658,6 +671,7 @@ export default function App() {
                           extractionDone={extractionDone}
                           activeElementType={activeElementType}
                           onElementTypeSelect={handleElementTypeSelect}
+                          onVisionItemHover={setHoveredVisionItemId}
                         />
                       )}
                       {currentStep === 3 && (

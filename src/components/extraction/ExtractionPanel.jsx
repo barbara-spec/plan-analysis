@@ -107,7 +107,7 @@ function MetricRow({ elementId, metricId, label, isDone, isAwaiting, onActivate,
 
 // ─── Vision results review ────────────────────────────────────────────────────
 
-function VisionReview({ elementLabel, items, isDone, onAccept, onDiscard, onRemoveItem, onAddItem }) {
+function VisionReview({ elementLabel, items, isDone, onAccept, onDiscard, onRemoveItem, onAddItem, onItemHover }) {
   const [adding,   setAdding]   = useState(false);
   const [newLabel, setNewLabel] = useState('');
 
@@ -145,7 +145,12 @@ function VisionReview({ elementLabel, items, isDone, onAccept, onDiscard, onRemo
       {/* Item list */}
       <div style={{ padding: '2px 10px', maxHeight: 180, overflowY: 'auto' }}>
         {items.map((item, i) => (
-          <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f5f5f6' }}>
+          <div
+            key={item.id}
+            onMouseEnter={() => onItemHover?.(item.id)}
+            onMouseLeave={() => onItemHover?.(null)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #f5f5f6', borderRadius: 4, transition: 'background 0.1s', cursor: item.planRef ? 'crosshair' : 'default' }}
+          >
             <span style={{ width: 18, height: 18, borderRadius: 4, background: 'rgba(81,81,205,0.1)', color: INDIGO, fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
             <span style={{ flex: 1, fontSize: 11.5, color: '#374151' }}>{item.label}</span>
             {item.width && <span style={{ fontSize: 11, color: '#6b7280', fontFamily: 'ui-monospace,monospace' }}>{item.width}</span>}
@@ -197,7 +202,8 @@ function ElementSection({ element, effectiveMethod, smartFilled, awaitingSmartSe
   onSmartSelect, onCancelSelect, onMethodChange,
   visionState, visionResultItems, onLaunchVision, onAcceptVision, onDiscardVision,
   onVisionRemoveItem, onVisionAddItem,
-  activeElementType, onElementTypeSelect }) {
+  activeElementType, onElementTypeSelect,
+  onVisionItemHover }) {
   const isActive = activeElementType === element.id;
 
   const activeMetrics  = Object.entries(element.metrics || {}).filter(([, v]) => v).map(([k]) => k);
@@ -320,6 +326,7 @@ function ElementSection({ element, effectiveMethod, smartFilled, awaitingSmartSe
           onDiscard={() => onDiscardVision(element.id)}
           onRemoveItem={(itemId) => onVisionRemoveItem?.(element.id, itemId)}
           onAddItem={(item) => onVisionAddItem?.(element.id, item)}
+          onItemHover={onVisionItemHover}
         />
       )}
     </div>
@@ -472,6 +479,7 @@ export default function ExtractionPanel({
   parentAssignments, onParentAssign,
   extractionDone,
   activeElementType, onElementTypeSelect,
+  onVisionItemHover,
 }) {
   const [showGrouping, setShowGrouping] = useState(false);
   const [showNewGroupForm, setShowNewGroupForm] = useState(false);
@@ -572,6 +580,7 @@ export default function ExtractionPanel({
             onVisionAddItem={onVisionAddItem}
             activeElementType={activeElementType}
             onElementTypeSelect={onElementTypeSelect}
+            onVisionItemHover={onVisionItemHover}
           />
         ))}
 
@@ -595,6 +604,7 @@ export default function ExtractionPanel({
             onVisionAddItem={onVisionAddItem}
             activeElementType={activeElementType}
             onElementTypeSelect={onElementTypeSelect}
+            onVisionItemHover={onVisionItemHover}
           />
         ))}
 
