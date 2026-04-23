@@ -55,15 +55,4 @@ export const elementTypes = [
     ],
     metrics: { count: false, surface: false, maxWidth: false, minWidth: true, minLength: false, maxLength: false, parent: false },
   },
-  {
-    id: 'stairs',
-    label: 'Escaliers',
-    method: 'vision',
-    inScope: false,
-    rules: [
-      { id: 'r_marche',       label: 'Hauteur de marche ≤ 17cm',    active: true },
-      { id: 'r_giron',        label: 'Giron ≥ 28cm',                active: true },
-    ],
-    metrics: { count: false, surface: false, maxWidth: false, minWidth: false, minLength: false, maxLength: false, parent: false },
-  },
 ];
