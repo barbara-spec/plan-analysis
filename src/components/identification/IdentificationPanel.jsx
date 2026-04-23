@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { METRIC_LABELS } from '../../data/elementTypes';
-import { EXTRACTION_RESULTS, RESULT_COLS } from '../../data/extractionResults';
+import { EXTRACTION_RESULTS } from '../../data/extractionResults';
 
 function checkFilter(filter, rawValue) {
   if (!filter) return null;
@@ -638,6 +638,140 @@ function UnifiedElementCard({
   );
 }
 
+// ── Results view ───────────────────────────────────────────────────────────────
+
+function StatusDot({ status }) {
+  const bg = status === 'fail' ? '#f59e0b' : status === 'pass' ? '#22c55e' : 'rgba(81,81,205,0.4)';
+  return <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: bg, display: 'inline-block' }} />;
+}
+
+function ResultsView({ elements, extractionDone, activeApt, onInstanceClick }) {
+  const inScopeElements = (elements ?? []).filter(e => e.inScope);
+
+  const getInstStatus = (inst, metricFilters) => {
+    if (Object.keys(metricFilters).length === 0) return 'extracted';
+    const anyFail = Object.entries(metricFilters).some(([mId, f]) => checkFilter(f, inst[mId]) === 'fail');
+    return anyFail ? 'fail' : 'pass';
+  };
+
+  const hasAnyData = inScopeElements.some(el => (EXTRACTION_RESULTS[el.id]?.length ?? 0) > 0);
+
+  if (!hasAnyData) {
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', gap: 10 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f1f2f4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="2" width="12" height="12" rx="2"/>
+            <path d="M2 6h12M6 6v8"/>
+          </svg>
+        </div>
+        <p style={{ fontSize: 12, color: MUTED, textAlign: 'center', lineHeight: 1.6, margin: 0 }}>
+          Configurez et lancez l'extraction pour voir les résultats ici.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto' }}>
+      {!extractionDone && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(81,81,205,0.04)', borderBottom: '1px solid #eef0f3' }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: INDIGO, flexShrink: 0, opacity: 0.5 }} />
+          <span style={{ fontSize: 10.5, color: '#6b7280', fontStyle: 'italic' }}>Données préliminaires — extraction en cours</span>
+        </div>
+      )}
+      {inScopeElements.map(el => {
+        const instances = EXTRACTION_RESULTS[el.id] ?? [];
+        if (instances.length === 0) return null;
+
+        const metricFilters = el.metricFilters ?? {};
+        // Prioritise filtered metrics, then other active ones — up to 2 shown
+        const activeMetrics = METRIC_LABELS.filter(m => m.id !== 'count' && !!el.metrics[m.id]);
+        const filtered = activeMetrics.filter(m => metricFilters[m.id]);
+        const rest     = activeMetrics.filter(m => !metricFilters[m.id]);
+        const displayMetrics = [...filtered, ...rest].slice(0, 2);
+
+        const statuses = instances.map(inst => getInstStatus(inst, metricFilters));
+        const failCount = statuses.filter(s => s === 'fail').length;
+        const allPass   = failCount === 0 && Object.keys(metricFilters).length > 0;
+
+        return (
+          <div key={el.id}>
+            {/* Section header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '9px 14px 5px',
+              position: 'sticky', top: 0, zIndex: 1,
+              background: 'white',
+              borderBottom: '1px solid #f1f2f4',
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: INK }}>{el.label}</span>
+              <span style={{ fontSize: 10, color: MUTED, fontWeight: 500 }}>{instances.length}</span>
+              {failCount > 0 ? (
+                <span style={{ fontSize: 9, fontWeight: 700, color: '#92400e', background: 'rgba(245,158,11,0.12)', padding: '1px 6px', borderRadius: 10, marginLeft: 'auto', flexShrink: 0 }}>
+                  {failCount} hors seuil
+                </span>
+              ) : allPass ? (
+                <span style={{ fontSize: 9, fontWeight: 700, color: '#15803d', background: 'rgba(34,197,94,0.1)', padding: '1px 6px', borderRadius: 10, marginLeft: 'auto', flexShrink: 0 }}>
+                  Tous conformes
+                </span>
+              ) : <span style={{ marginLeft: 'auto' }} />}
+              {displayMetrics.map(m => (
+                <span key={m.id} style={{ width: 68, fontSize: 9, fontWeight: 600, color: metricFilters[m.id] ? INDIGO : MUTED, textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right', flexShrink: 0 }}>
+                  {m.label.length > 7 ? m.label.slice(0, 6) + '…' : m.label}
+                </span>
+              ))}
+            </div>
+
+            {/* Instance rows */}
+            {instances.map((inst, idx) => {
+              const status = statuses[idx];
+              const isActive = activeApt && activeApt === inst.planRef;
+              return (
+                <div
+                  key={inst.id}
+                  onClick={() => inst.planRef && onInstanceClick?.(inst.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '5px 14px',
+                    background: isActive ? 'rgba(81,81,205,0.04)' : 'transparent',
+                    borderLeft: `3px solid ${isActive ? INDIGO : 'transparent'}`,
+                    borderBottom: '1px solid #f8f9fa',
+                    cursor: inst.planRef ? 'pointer' : 'default',
+                    transition: 'background .1s',
+                  }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#fafafa'; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <StatusDot status={status} />
+                  <span style={{
+                    flex: 1, fontSize: 11, minWidth: 0,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    color: isActive ? INDIGO : '#374151',
+                    fontWeight: isActive ? 500 : 400,
+                  }}>
+                    {inst.label}
+                  </span>
+                  {displayMetrics.map(m => {
+                    const val = inst[m.id];
+                    const fr  = metricFilters[m.id] ? checkFilter(metricFilters[m.id], val) : null;
+                    const col = fr === 'fail' ? '#f59e0b' : fr === 'pass' ? '#16a34a' : '#9ca3af';
+                    return (
+                      <span key={m.id} style={{ width: 68, fontSize: 10.5, color: col, fontFamily: 'ui-monospace,monospace', textAlign: 'right', flexShrink: 0 }}>
+                        {val ?? '—'}
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main panel ─────────────────────────────────────────────────────────────────
 
 export default function IdentificationPanel({
@@ -654,6 +788,14 @@ export default function IdentificationPanel({
   activeElementType, onElementTypeSelect, onVisionItemHover,
 }) {
   const [showNewGroupForm, setShowNewGroupForm] = useState(false);
+  const [activeTab, setActiveTab] = useState('config');
+
+  // Auto-switch to results when extraction completes
+  const prevExtractedRef = useRef(false);
+  useEffect(() => {
+    if (extractionDone && !prevExtractedRef.current) setActiveTab('results');
+    prevExtractedRef.current = extractionDone;
+  }, [extractionDone]);
 
   const inScopeElements = (elements ?? []).filter(e => e.inScope);
 
@@ -674,6 +816,17 @@ export default function IdentificationPanel({
   });
   const pct = totalSteps === 0 ? 0 : Math.round((doneSteps / totalSteps) * 100);
   const hasStarted = doneSteps > 0;
+
+  // Results tab counts
+  const totalExtracted = inScopeElements.reduce((sum, el) => sum + (EXTRACTION_RESULTS[el.id]?.length ?? 0), 0);
+  const totalFails = inScopeElements.reduce((sum, el) => {
+    const instances = EXTRACTION_RESULTS[el.id] ?? [];
+    const filters   = el.metricFilters ?? {};
+    if (Object.keys(filters).length === 0) return sum;
+    return sum + instances.filter(inst =>
+      Object.entries(filters).some(([mId, f]) => checkFilter(f, inst[mId]) === 'fail')
+    ).length;
+  }, 0);
 
   const handleConfirmNewGroup = ({ label, method, metrics, customMetrics }) => {
     onAddGroup(`group_${Date.now()}`, label, method, metrics, customMetrics ?? []);
@@ -706,8 +859,46 @@ export default function IdentificationPanel({
         )}
       </div>
 
-      {/* Scrollable card list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 12px' }}>
+      {/* Tab bar */}
+      <div style={{ display: 'flex', padding: '0 14px', borderBottom: '1px solid #f1f2f4', flexShrink: 0, background: 'white' }}>
+        {[
+          { id: 'config',  label: 'Configuration' },
+          { id: 'results', label: 'Résultats', count: totalExtracted || null, failCount: totalFails },
+        ].map(tab => {
+          const isActive = activeTab === tab.id;
+          const showFail = tab.id === 'results' && tab.failCount > 0;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '7px 0', marginRight: 20,
+                fontSize: 11, fontWeight: isActive ? 600 : 400,
+                color: isActive ? INK : MUTED,
+                background: 'none', border: 'none',
+                borderBottom: `2px solid ${isActive ? INDIGO : 'transparent'}`,
+                cursor: 'pointer',
+                transition: 'color .1s, border-color .1s',
+              }}
+            >
+              {tab.label}
+              {tab.count != null && (
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 8, lineHeight: 1.4,
+                  background: showFail ? 'rgba(245,158,11,0.12)' : isActive ? 'rgba(81,81,205,0.1)' : '#f1f2f4',
+                  color:      showFail ? '#92400e' : isActive ? INDIGO : MUTED,
+                }}>
+                  {showFail ? `${tab.failCount}` : tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Config tab: scrollable card list */}
+      {activeTab === 'config' && <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 12px' }}>
 
         {/* Default elements */}
         {(elements ?? []).map(el => (
@@ -791,7 +982,17 @@ export default function IdentificationPanel({
             Ajouter un groupe d'éléments
           </button>
         )}
-      </div>
+      </div>}
+
+      {/* Results tab */}
+      {activeTab === 'results' && (
+        <ResultsView
+          elements={elements}
+          extractionDone={extractionDone}
+          activeApt={activeApt}
+          onInstanceClick={onInstanceClick}
+        />
+      )}
     </div>
   );
 }
