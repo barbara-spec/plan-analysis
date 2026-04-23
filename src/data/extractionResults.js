@@ -1,6 +1,6 @@
 // Metric columns shown in the results table (no count/parent)
 export const RESULT_COLS = [
-  { id: 'surface',   label: 'Surface Area' },
+  { id: 'surface',   label: 'Surface' },
   { id: 'maxLength', label: 'Max Length' },
   { id: 'maxWidth',  label: 'Max Width' },
   { id: 'minLength', label: 'Min Length' },
@@ -18,13 +18,27 @@ export const EXTRACTION_RESULTS = {
     { id: 'r6', planRef: 'A302', label: 'T1 — A302', surface: '32 m²', maxLength: '350 cm', maxWidth: '280 cm', minLength: '210 cm', minWidth: '180 cm' },
   ],
   doors: [
-    { id: 'd1', label: 'Porte 1', surface: null, maxLength: '220 cm', maxWidth: '110 cm', minLength: '200 cm', minWidth: '90 cm' },
-    { id: 'd2', label: 'Porte 2', surface: null, maxLength: '215 cm', maxWidth: '90 cm',  minLength: '195 cm', minWidth: '83 cm' },
-    { id: 'd3', label: 'Porte 3', surface: null, maxLength: '220 cm', maxWidth: '100 cm', minLength: '200 cm', minWidth: '80 cm' },
-    { id: 'd4', label: 'Porte 4', surface: null, maxLength: '220 cm', maxWidth: '110 cm', minLength: '200 cm', minWidth: '90 cm' },
-    { id: 'd5', label: 'Porte 5', surface: null, maxLength: '215 cm', maxWidth: '95 cm',  minLength: '195 cm', minWidth: '83 cm' },
-    { id: 'd6', label: 'Porte 6', surface: null, maxLength: '220 cm', maxWidth: '100 cm', minLength: '200 cm', minWidth: '80 cm' },
-    { id: 'd7', label: 'Porte 7', surface: null, maxLength: '215 cm', maxWidth: '90 cm',  minLength: '195 cm', minWidth: '80 cm' },
+    { id: 'd1', planRef: 'dA101_1', label: 'Porte A101',   surface: null, maxLength: '220 cm', maxWidth: '110 cm', minLength: '200 cm', minWidth: '90 cm' },
+    { id: 'd2', planRef: 'dA201_1', label: 'Porte A201-1', surface: null, maxLength: '215 cm', maxWidth: '90 cm',  minLength: '195 cm', minWidth: '83 cm' },
+    { id: 'd3', planRef: 'dA201_2', label: 'Porte A201-2', surface: null, maxLength: '220 cm', maxWidth: '100 cm', minLength: '200 cm', minWidth: '80 cm' },
+    { id: 'd4', planRef: 'dA301_1', label: 'Porte A301',   surface: null, maxLength: '220 cm', maxWidth: '110 cm', minLength: '200 cm', minWidth: '90 cm' },
+    { id: 'd5', planRef: 'dA102_1', label: 'Porte A102',   surface: null, maxLength: '215 cm', maxWidth: '95 cm',  minLength: '195 cm', minWidth: '83 cm' },
+    { id: 'd6', planRef: 'dA202_1', label: 'Porte A202',   surface: null, maxLength: '220 cm', maxWidth: '100 cm', minLength: '200 cm', minWidth: '80 cm' },
+    { id: 'd7', planRef: 'dA302_1', label: 'Porte A302',   surface: null, maxLength: '215 cm', maxWidth: '90 cm',  minLength: '195 cm', minWidth: '80 cm' },
+  ],
+  windows: [
+    { id: 'w1',  planRef: 'wA101_1', label: 'Fenêtre A101 — F01', surface: null, maxWidth: '120 cm', minWidth: '120 cm', maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w2',  planRef: 'wA101_2', label: 'Fenêtre A101 — F02', surface: null, maxWidth: '90 cm',  minWidth: '90 cm',  maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w3',  planRef: 'wA201_1', label: 'Fenêtre A201 — F01', surface: null, maxWidth: '150 cm', minWidth: '150 cm', maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w4',  planRef: 'wA201_2', label: 'Fenêtre A201 — F02', surface: null, maxWidth: '150 cm', minWidth: '150 cm', maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w5',  planRef: 'wA301_1', label: 'Fenêtre A301 — F01', surface: null, maxWidth: '120 cm', minWidth: '120 cm', maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w6',  planRef: 'wA301_2', label: 'Fenêtre A301 — F02', surface: null, maxWidth: '90 cm',  minWidth: '90 cm',  maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w7',  planRef: 'wA102_1', label: 'Fenêtre A102 — F01', surface: null, maxWidth: '120 cm', minWidth: '120 cm', maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w8',  planRef: 'wA102_2', label: 'Fenêtre A102 — F02', surface: null, maxWidth: '90 cm',  minWidth: '90 cm',  maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w9',  planRef: 'wA202_1', label: 'Fenêtre A202 — F01', surface: null, maxWidth: '120 cm', minWidth: '120 cm', maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w10', planRef: 'wA202_2', label: 'Fenêtre A202 — F02', surface: null, maxWidth: '120 cm', minWidth: '120 cm', maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w11', planRef: 'wA302_1', label: 'Fenêtre A302 — F01', surface: null, maxWidth: '120 cm', minWidth: '120 cm', maxLength: '135 cm', minLength: '135 cm' },
+    { id: 'w12', planRef: 'wA302_2', label: 'Fenêtre A302 — F02', surface: null, maxWidth: '90 cm',  minWidth: '90 cm',  maxLength: '135 cm', minLength: '135 cm' },
   ],
   parking: [
     { id: 'p1', label: 'Place PMR 1', surface: null, maxLength: '500 cm', maxWidth: '360 cm', minLength: '480 cm', minWidth: '330 cm' },
@@ -36,5 +50,6 @@ export const EXTRACTION_RESULTS = {
 export const ELEMENT_TASK_MAP = {
   rooms:   'ext_logements',
   doors:   'ext_portes',
+  windows: 'ext_fenetres',
   parking: 'ext_stationnement',
 };

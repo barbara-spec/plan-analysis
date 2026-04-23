@@ -11,10 +11,16 @@ Object.entries(EXTRACTION_RESULTS).forEach(([elementId, instances]) => {
   });
 });
 
-// Static lookup: doorId → { apt, door } — used for vision hover highlights
+// Static lookup: doorId → { apt, door }
 const DOOR_MAP = {};
 apartments.forEach(apt => {
   (apt.doors ?? []).forEach(door => { DOOR_MAP[door.id] = { apt, door }; });
+});
+
+// Static lookup: windowId → { apt, win }
+const WINDOW_MAP = {};
+apartments.forEach(apt => {
+  (apt.windows ?? []).forEach(win => { WINDOW_MAP[win.id] = { apt, win }; });
 });
 
 const VW = 800, VH = 500;
@@ -189,6 +195,48 @@ function DoorHighlight({ item, index, isHovered }) {
   );
 }
 
+// Highlight shown on plan for a click-selected door (from Results tab or plan click)
+function DoorSelectionHighlight({ doorId }) {
+  const entry = DOOR_MAP[doorId];
+  if (!entry) return null;
+  const { apt, door } = entry;
+  const px = toX(apt.poly.x / 8), py = toY(apt.poly.y / 5);
+  const ph = toY(apt.poly.h / 5);
+  const wallY = door.side === 'bottom' ? py + ph : py;
+  const gapX  = px + door.offset;
+  const PAD = 6, DEPTH = 32;
+  const boxY = door.side === 'bottom' ? wallY - DEPTH : wallY;
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      <rect x={gapX - PAD} y={boxY} width={door.w + PAD * 2} height={DEPTH + PAD}
+        fill="rgba(81,81,205,0.12)" stroke="#5151cd" strokeWidth={2} rx={3} />
+    </g>
+  );
+}
+
+// Highlight shown on plan for a click-selected window (from Results tab or plan click)
+function WindowHighlight({ winId }) {
+  const entry = WINDOW_MAP[winId];
+  if (!entry) return null;
+  const { apt, win } = entry;
+  const px = toX(apt.poly.x / 8), py = toY(apt.poly.y / 5);
+  const pw = toX(apt.poly.w / 8), ph = toY(apt.poly.h / 5);
+  const wx = win.side === 'right' ? px + pw : win.side !== 'left' ? px + win.offset : px;
+  const wy = win.side === 'bottom' ? py + ph : win.side !== 'top'  ? py + win.offset : py;
+  const PAD = 5, DEPTH = 20;
+  let rx, ry, rw, rh;
+  if      (win.side === 'top')    { rx = wx - PAD;    ry = wy;        rw = win.w + PAD * 2; rh = DEPTH; }
+  else if (win.side === 'bottom') { rx = wx - PAD;    ry = wy - DEPTH; rw = win.w + PAD * 2; rh = DEPTH; }
+  else if (win.side === 'right')  { rx = wx - DEPTH;  ry = wy - PAD;  rw = DEPTH; rh = win.w + PAD * 2; }
+  else                            { rx = wx;          ry = wy - PAD;  rw = DEPTH; rh = win.w + PAD * 2; }
+  return (
+    <g style={{ pointerEvents: 'none' }}>
+      <rect x={rx} y={ry} width={rw} height={rh}
+        fill="rgba(81,81,205,0.12)" stroke="#5151cd" strokeWidth={2} rx={3} />
+    </g>
+  );
+}
+
 const STATUS_COLOR = {
   pass:           { fill: '#22c55e', stroke: '#16a34a', light: '#dcfce7' },
   fail:           { fill: '#ef4444', stroke: '#dc2626', light: '#fee2e2' },
@@ -257,9 +305,19 @@ export default function PlanCanvas({
     ? AI_EVALUATIONS.find(e => e.id === activeEvalId)
     : null;
 
-  // Set of apt IDs belonging to the focused element type (panel → plan highlight)
+  // Set of apt IDs for the focused element type — only apartment-level planRefs drive the dim effect
+  const APT_ID_SET = new Set(apartments.map(a => a.id));
   const activeTypeAptIds = activeElementType && EXTRACTION_RESULTS[activeElementType]
-    ? new Set(EXTRACTION_RESULTS[activeElementType].filter(i => i.planRef).map(i => i.planRef))
+    ? (() => {
+        const refs = EXTRACTION_RESULTS[activeElementType]
+          .filter(i => i.planRef && APT_ID_SET.has(i.planRef)).map(i => i.planRef);
+        return refs.length > 0 ? new Set(refs) : null;
+      })()
+    : null;
+
+  // When a door/window is selected, identify its parent apartment for a soft highlight
+  const activeParentAptId = activeApt
+    ? (DOOR_MAP[activeApt]?.apt.id ?? WINDOW_MAP[activeApt]?.apt.id ?? null)
     : null;
 
   const [hoveredApt, setHoveredApt] = useState(null);
@@ -353,11 +411,12 @@ export default function PlanCanvas({
           : mode === 'verification' ? aptStatus(apt, overrides) : 'idle';
         const col = STATUS_COLOR[status];
         const delta = mode === 'verification' ? aptDelta(apt, editedValues) : null;
-        const isActive    = activeApt === apt.id;
-        const isZoomed    = zoomedApt === apt.id;
-        const isTypeMatch = activeTypeAptIds?.has(apt.id) ?? false;
-        const isTypeDim   = activeTypeAptIds != null && !isTypeMatch;
-        const surface     = editedValues?.[apt.id] ?? apt.surface;
+        const isActive       = activeApt === apt.id;
+        const isZoomed       = zoomedApt === apt.id;
+        const isParentActive = activeParentAptId === apt.id; // door/window inside this apt is selected
+        const isTypeMatch    = activeTypeAptIds?.has(apt.id) ?? false;
+        const isTypeDim      = activeTypeAptIds != null && !isTypeMatch;
+        const surface        = editedValues?.[apt.id] ?? apt.surface;
 
         return (
           <g
@@ -375,8 +434,9 @@ export default function PlanCanvas({
             <rect
               x={px} y={py} width={pw} height={ph}
               fill={mode === 'verification' ? col.light : 'white'}
-              stroke={isActive || isZoomed ? '#111827' : (mode === 'verification' ? col.stroke : '#374151')}
-              strokeWidth={isActive || isZoomed ? 2.5 : 1.5}
+              stroke={isActive || isZoomed ? '#111827' : isParentActive ? '#5151cd' : (mode === 'verification' ? col.stroke : '#374151')}
+              strokeWidth={isActive || isZoomed ? 2.5 : isParentActive ? 1.5 : 1.5}
+              strokeDasharray={isParentActive && !isActive ? '5 3' : 'none'}
               style={{ transition: 'all 0.25s' }}
             />
 
@@ -437,14 +497,46 @@ export default function PlanCanvas({
               {surface.toFixed(1)} m²
             </text>
 
-            {/* Windows */}
-            {(apt.windows ?? []).map(win => (
-              <WindowSymbol key={win.id} win={win} poly={{ x: px, y: py, w: pw, h: ph }} />
-            ))}
-            {/* Doors */}
-            {(apt.doors ?? []).map(door => (
-              <DoorSymbol key={door.id} door={door} poly={{ x: px, y: py, w: pw, h: ph }} />
-            ))}
+            {/* Windows — symbol + transparent hit area */}
+            {(apt.windows ?? []).map(win => {
+              const isH = win.side === 'top' || win.side === 'bottom';
+              const wx = win.side === 'right' ? px + pw : win.side !== 'left' ? px + win.offset : px;
+              const wy = win.side === 'bottom' ? py + ph : win.side !== 'top' ? py + win.offset : py;
+              const PAD = 5, DEPTH = 20;
+              let hx, hy, hw, hh;
+              if      (win.side === 'top')    { hx = wx - PAD;   hy = wy;        hw = win.w + PAD * 2; hh = DEPTH; }
+              else if (win.side === 'bottom') { hx = wx - PAD;   hy = wy-DEPTH;  hw = win.w + PAD * 2; hh = DEPTH; }
+              else if (win.side === 'right')  { hx = wx - DEPTH; hy = wy - PAD;  hw = DEPTH; hh = win.w + PAD * 2; }
+              else                            { hx = wx;         hy = wy - PAD;  hw = DEPTH; hh = win.w + PAD * 2; }
+              return (
+                <g key={win.id}>
+                  <WindowSymbol win={win} poly={{ x: px, y: py, w: pw, h: ph }} />
+                  <rect x={hx} y={hy} width={hw} height={hh} fill="transparent" style={{ cursor: 'pointer' }}
+                    onMouseEnter={e => { e.stopPropagation(); mode === 'extraction' && setHoveredApt(win.id); }}
+                    onMouseLeave={e => { e.stopPropagation(); setHoveredApt(null); }}
+                    onClick={e => { e.stopPropagation(); onAptClick?.(win.id); }}
+                  />
+                </g>
+              );
+            })}
+            {/* Doors — symbol + transparent hit area */}
+            {(apt.doors ?? []).map(door => {
+              const wallY = door.side === 'bottom' ? py + ph : py;
+              const gapX  = px + door.offset;
+              const PAD = 6, DEPTH = 32;
+              const boxY = door.side === 'bottom' ? wallY - DEPTH : wallY;
+              return (
+                <g key={door.id}>
+                  <DoorSymbol door={door} poly={{ x: px, y: py, w: pw, h: ph }} />
+                  <rect x={gapX - PAD} y={boxY} width={door.w + PAD * 2} height={DEPTH + PAD}
+                    fill="transparent" style={{ cursor: 'pointer' }}
+                    onMouseEnter={e => { e.stopPropagation(); mode === 'extraction' && setHoveredApt(door.id); }}
+                    onMouseLeave={e => { e.stopPropagation(); setHoveredApt(null); }}
+                    onClick={e => { e.stopPropagation(); onAptClick?.(door.id); }}
+                  />
+                </g>
+              );
+            })}
 
             {/* Verification: delta badge */}
             {mode === 'verification' && delta !== null && (
@@ -504,6 +596,12 @@ export default function PlanCanvas({
         );
       })}
 
+      {/* Selected door highlight (click from Results tab or plan) */}
+      {activeApt && DOOR_MAP[activeApt] && <DoorSelectionHighlight doorId={activeApt} />}
+
+      {/* Selected window highlight */}
+      {activeApt && WINDOW_MAP[activeApt] && <WindowHighlight winId={activeApt} />}
+
       {/* Vision door highlights — numbered bubbles + hover bounding box */}
       {visionDoorItems.map((item, idx) => (
         <DoorHighlight
@@ -514,8 +612,96 @@ export default function PlanCanvas({
         />
       ))}
 
-      {/* Extraction hover card */}
+      {/* Extraction hover card — apartment, door, or window */}
       {hoveredApt && (() => {
+        const cardW = 168, rowH = 15;
+
+        // ── Door hover card ────────────────────────────────────────────────────
+        if (DOOR_MAP[hoveredApt]) {
+          const { apt, door } = DOOR_MAP[hoveredApt];
+          const px = toX(apt.poly.x / 8), py = toY(apt.poly.y / 5);
+          const ph = toY(apt.poly.h / 5);
+          const wallY = door.side === 'bottom' ? py + ph : py;
+          const gapCx = px + door.offset + door.w / 2;
+          const dInst = EXTRACTION_RESULTS.doors?.find(d => d.planRef === hoveredApt);
+          if (!dInst) return null;
+          const element = elements?.find(e => e.id === 'doors');
+          const filters = element?.metricFilters ?? {};
+          const metrics = RESULT_COLS.filter(c => dInst[c.id] != null);
+          const cardH = 30 + metrics.length * rowH;
+          const cardX = gapCx + cardW / 2 + 4 > VW ? gapCx - cardW - 4 : gapCx + 4;
+          const cardY = Math.max(4, Math.min(wallY - cardH / 2, VH - cardH - 4));
+          return (
+            <g style={{ pointerEvents: 'none' }}>
+              <rect x={cardX} y={cardY} width={cardW} height={cardH} rx={7}
+                fill="white" stroke="#e5e7eb" strokeWidth={1}
+                style={{ filter: 'drop-shadow(0 4px 16px rgba(0,0,0,.14))' }} />
+              <text x={cardX + 11} y={cardY + 17} fontSize={10.5} fontWeight="700" fill="#111827">{dInst.label}</text>
+              <line x1={cardX + 1} y1={cardY + 22} x2={cardX + cardW - 1} y2={cardY + 22} stroke="#f1f2f4" strokeWidth={1} />
+              {metrics.map((col, i) => {
+                const fr = checkFilter(filters[col.id], dInst[col.id]);
+                const vc = fr === 'fail' ? '#f59e0b' : fr === 'pass' ? '#16a34a' : '#374151';
+                return (
+                  <g key={col.id}>
+                    <text x={cardX + 11} y={cardY + 31 + i * rowH} fontSize={9} fill="#9ca3af">{col.label}</text>
+                    {fr === 'fail' && <circle cx={cardX + cardW - 20} cy={cardY + 27 + i * rowH} r={5} fill="#f59e0b" />}
+                    {fr === 'pass' && <circle cx={cardX + cardW - 20} cy={cardY + 27 + i * rowH} r={5} fill="#22c55e" />}
+                    <text x={fr ? cardX + cardW - 28 : cardX + cardW - 10} y={cardY + 31 + i * rowH}
+                      fontSize={10} fill={vc} textAnchor="end" fontFamily="ui-monospace, monospace" fontWeight={fr ? '600' : '400'}>
+                      {dInst[col.id]}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          );
+        }
+
+        // ── Window hover card ──────────────────────────────────────────────────
+        if (WINDOW_MAP[hoveredApt]) {
+          const { apt, win } = WINDOW_MAP[hoveredApt];
+          const px = toX(apt.poly.x / 8), py = toY(apt.poly.y / 5);
+          const pw = toX(apt.poly.w / 8), ph = toY(apt.poly.h / 5);
+          const wx = win.side === 'right' ? px + pw : win.side !== 'left' ? px + win.offset : px;
+          const wy = win.side === 'bottom' ? py + ph : win.side !== 'top'  ? py + win.offset : py;
+          const wInst = EXTRACTION_RESULTS.windows?.find(w => w.planRef === hoveredApt);
+          if (!wInst) return null;
+          const element = elements?.find(e => e.id === 'windows');
+          const filters = element?.metricFilters ?? {};
+          const metrics = RESULT_COLS.filter(c => wInst[c.id] != null);
+          const cardH = 30 + metrics.length * rowH;
+          const isV   = win.side === 'left' || win.side === 'right';
+          const anchorX = isV ? (win.side === 'right' ? wx - cardW - 6 : wx + 6) : wx + win.w / 2 - cardW / 2;
+          const anchorY = isV ? wy - cardH / 2 : (win.side === 'top' ? wy + 6 : wy - cardH - 6);
+          const cardX = Math.max(4, Math.min(anchorX, VW - cardW - 4));
+          const cardY = Math.max(4, Math.min(anchorY, VH - cardH - 4));
+          return (
+            <g style={{ pointerEvents: 'none' }}>
+              <rect x={cardX} y={cardY} width={cardW} height={cardH} rx={7}
+                fill="white" stroke="#e5e7eb" strokeWidth={1}
+                style={{ filter: 'drop-shadow(0 4px 16px rgba(0,0,0,.14))' }} />
+              <text x={cardX + 11} y={cardY + 17} fontSize={10.5} fontWeight="700" fill="#111827">{wInst.label}</text>
+              <line x1={cardX + 1} y1={cardY + 22} x2={cardX + cardW - 1} y2={cardY + 22} stroke="#f1f2f4" strokeWidth={1} />
+              {metrics.map((col, i) => {
+                const fr = checkFilter(filters[col.id], wInst[col.id]);
+                const vc = fr === 'fail' ? '#f59e0b' : fr === 'pass' ? '#16a34a' : '#374151';
+                return (
+                  <g key={col.id}>
+                    <text x={cardX + 11} y={cardY + 31 + i * rowH} fontSize={9} fill="#9ca3af">{col.label}</text>
+                    {fr === 'fail' && <circle cx={cardX + cardW - 20} cy={cardY + 27 + i * rowH} r={5} fill="#f59e0b" />}
+                    {fr === 'pass' && <circle cx={cardX + cardW - 20} cy={cardY + 27 + i * rowH} r={5} fill="#22c55e" />}
+                    <text x={fr ? cardX + cardW - 28 : cardX + cardW - 10} y={cardY + 31 + i * rowH}
+                      fontSize={10} fill={vc} textAnchor="end" fontFamily="ui-monospace, monospace" fontWeight={fr ? '600' : '400'}>
+                      {wInst[col.id]}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          );
+        }
+
+        // ── Apartment hover card ───────────────────────────────────────────────
         const entry = APT_INSTANCE_MAP[hoveredApt];
         if (!entry) return null;
         const apt = apartments.find(a => a.id === hoveredApt);
@@ -526,7 +712,7 @@ export default function PlanCanvas({
         const element = elements?.find(e => e.id === elementId);
         const metricFilters = element?.metricFilters ?? {};
         const metrics = RESULT_COLS.filter(c => inst[c.id] != null);
-        const cardW = 168, rowH = 15, cardH = 30 + metrics.length * rowH;
+        const cardH = 30 + metrics.length * rowH;
         const cardX = px + pw + 8 > VW - cardW ? px - cardW - 8 : px + pw + 8;
         const cardY = Math.min(py, VH - cardH - 4);
         return (
@@ -534,10 +720,8 @@ export default function PlanCanvas({
             <rect x={cardX} y={cardY} width={cardW} height={cardH} rx={7}
               fill="white" stroke="#e5e7eb" strokeWidth={1}
               style={{ filter: 'drop-shadow(0 4px 16px rgba(0,0,0,.14))' }} />
-            {/* Title */}
             <text x={cardX + 11} y={cardY + 17} fontSize={10.5} fontWeight="700" fill="#111827">{inst.label}</text>
             <line x1={cardX + 1} y1={cardY + 22} x2={cardX + cardW - 1} y2={cardY + 22} stroke="#f1f2f4" strokeWidth={1} />
-            {/* Metric rows */}
             {metrics.map((col, i) => {
               const filterResult = checkFilter(metricFilters[col.id], inst[col.id]);
               const valColor = filterResult === 'fail' ? '#f59e0b' : filterResult === 'pass' ? '#16a34a' : '#374151';
